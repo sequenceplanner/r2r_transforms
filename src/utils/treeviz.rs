@@ -31,14 +31,21 @@ pub fn build_tree_recursive(
     tree
 }
 
-// pub fn get_tree_root(buffer: &HashMap<String, TransformStamped>) -> Option<String> {
-//     for frame in buffer {
-//         match buffer.get(&frame.0.clone()) {
-//             Some(_) => continue,
-//             None => return Some(frame.0.clone()),
-//         }
+// pub fn build_all_trees_recursive(
+//     node_id: &str,
+//     transforms: &HashMap<String, TransformStamped>,
+//     parent_map: &HashMap<String, Vec<String>>,
+//     current_depth: u64,
+// ) -> Vec<Tree<String>> {
+
+//     let mut parent_map: HashMap<String, Vec<String>> = HashMap::new();
+//     for transform in transforms.values() {
+//         parent_map
+//             .entry(transform.parent_frame_id.clone())
+//             .or_default()
+//             .push(transform.child_frame_id.clone());
 //     }
-//     None
+
 // }
 
 pub fn get_tree_root(buffer: &HashMap<String, TransformStamped>) -> Option<String> {
@@ -46,7 +53,7 @@ pub fn get_tree_root(buffer: &HashMap<String, TransformStamped>) -> Option<Strin
         let mut current_frame = start_frame.clone();
         while let Some(transform) = buffer.get(&current_frame) {
             if !buffer.contains_key(&transform.parent_frame_id) {
-                return Some(current_frame);
+                return Some(transform.parent_frame_id.clone());
             }
             current_frame = transform.parent_frame_id.clone();
         }
@@ -55,8 +62,17 @@ pub fn get_tree_root(buffer: &HashMap<String, TransformStamped>) -> Option<Strin
 }
 
 pub async fn vizualize_tree(
-    buffer: SpaceTreeServer, //&Arc<Mutex<HashMap<String, TransformStamped>>>,
+    buffer: &SpaceTreeServer,
     refresh_rate: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    loop {
+        let _ = visualize_tree_once(buffer);
+        tokio::time::sleep(Duration::from_millis(refresh_rate)).await;
+    }
+}
+
+pub fn visualize_tree_once(
+    buffer: &SpaceTreeServer,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let buffer_local = buffer.buffer.lock().unwrap().clone();
 
@@ -68,17 +84,14 @@ pub async fn vizualize_tree(
             .push(transform.child_frame_id.clone());
     }
 
-    loop {
-        match get_tree_root(&buffer_local) {
-            Some(root) => println!(
-                "ROOT IS: {root} : {}",
-                build_tree_recursive(&root, &buffer_local, &parent_map, 0)
-            ),
-            None => println!("No tree root."),
-        }
-
-        tokio::time::sleep(Duration::from_millis(refresh_rate)).await;
+    match get_tree_root(&buffer_local) {
+        Some(root) => println!(
+            "{}",
+            build_tree_recursive(&root, &buffer_local, &parent_map, 0)
+        ),
+        None => println!("No tree root."),
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -259,5 +272,4 @@ mod tests {
     }
 
     // TODO: need a test for the async function
-
 }

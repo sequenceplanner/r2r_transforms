@@ -195,7 +195,7 @@ fn test_load_and_deserialize_from_file() {
 
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
 
-    let path = format!("{}/tests/data", manifest_dir);
+    let path = format!("{}/examples/data", manifest_dir);
     println!("{}", path);
     let frames = list_frames_in_dir(&path);
 

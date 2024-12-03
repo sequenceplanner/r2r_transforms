@@ -48,7 +48,11 @@ impl SpaceTreeServer {
                     frames.values().for_each(|frame| Self::insert_transform(&self, &frame.child_frame_id, frame.clone()));
                 } else {
                     let buffer = self.buffer.lock().unwrap();
-                    frames.values().filter(|frame| buffer.get(&frame.child_frame_id) == None).for_each(|frame| Self::insert_transform(&self, &frame.child_frame_id, frame.clone()));
+                    frames
+                        .values()
+                        .filter(|frame| buffer
+                        .get(&frame.child_frame_id) == None)
+                        .for_each(|frame| Self::insert_transform(&self, &frame.child_frame_id, frame.clone()));
                 }
                 // Self::apply_changes(&self);
             },
@@ -242,24 +246,27 @@ impl SpaceTreeServer {
         );
     }
 
-    // pub fn get_tree_root(&self) -> Option<String> {
-    //     let buffer = self.buffer.lock().unwrap().clone();
-    //     for frame in &buffer {
-    //         match buffer.get(&frame.0.clone()) {
-    //             Some(_) => continue,
-    //             None => return Some(frame.0.clone()),
-    //         }
-    //     }
-    //     None
-    // }
-
     pub fn lookup_transform(&self, parent_frame_id: &str, child_frame_id: &str) -> Option<TransformStamped> {
-        lookup_transform(parent_frame_id, child_frame_id, "world", &self.buffer)
+        let buffer = self.buffer.lock().unwrap();
+        match get_tree_root(&buffer) {
+            Some(root) => {
+                lookup_transform(parent_frame_id, child_frame_id, &root, &self.buffer)
+            },
+            None => {
+                lookup_transform(parent_frame_id, child_frame_id, "world", &self.buffer)
+            }
+        }
+        
     }
 
-    // pub fn lookup_custom(&self, parent_frame_id: &str, child_frame_id: &str, root_frame_id: &str) -> Option<TransformStamped> {
-    //     lookup_transform(parent_frame_id, child_frame_id, root_frame_id, &self.buffer)
-    // }
+    pub fn lookup_with_root(&self, parent_frame_id: &str, child_frame_id: &str, root_frame_id: &str) -> Option<TransformStamped> {
+        lookup_transform(parent_frame_id, child_frame_id, root_frame_id, &self.buffer)
+    }
+
+    pub fn get_all_transform_names(&self) -> Vec<String> {
+        let buffer = self.buffer.lock().unwrap();
+        buffer.keys().map(|k| k.to_owned()).collect::<Vec<String>>()
+    }
 
     /// Applies pending updates to the transform buffer.
     /// TODO: Sort out the connection with ROS /tf
@@ -275,6 +282,11 @@ impl SpaceTreeServer {
         for (name, update_context) in pending_updates.iter() {
             match update_context.update_type {
                 UpdateType::Add => {
+                    if name != &update_context.transform.child_frame_id {
+                        println!("Transform name '{name}' in buffer doesn't match the child_frame_id {}, they should be the same. Not added.", update_context.transform.child_frame_id);
+                        return;
+                    }
+
                     if let Some(_) = buffer.get(name) {
                         println!("Transform '{}' already exists, not added.", name);
                     } else {

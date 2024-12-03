@@ -1,4 +1,5 @@
 use log::*;
+use nalgebra::Isometry3;
 // use utils::treeviz::vizualize_tree;
 use r2r_transforms::utils::treeviz::vizualize_tree;
 use std::collections::HashMap;
@@ -6,9 +7,8 @@ use std::sync::{Arc, Mutex};
 
 use r2r_transforms::*;
 // use structopt::StructOpt;
-use tokio::time::Duration;
+use tokio::time::{Duration, Instant};
 
-pub static SPACE_TREE_BUFFER_MAINTAIN_RATE: u64 = 1; // milliseconds
 pub static VISUALIZE_TREE_REFRESH_RATE: u64 = 100; // milliseconds
 
 // fn handle_args() -> Args {
@@ -29,32 +29,27 @@ async fn main() -> () {
 
     initialize_logging();
 
-    log::info!("Starting the test_deserialize_transform_stamped test...");
+    log::info!("Starting the r2r_transforms example...");
 
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
-
-    let path = format!("{}/examples/data", manifest_dir);
     let buffer = SpaceTreeServer::new("test");
-    buffer.load_scenario(&path, false);
-    buffer.apply_changes();
-
-    // let buffer = Arc::new(Mutex::new(HashMap::<String, TransformStamped>::new()));
-    // let buffer_clone = buffer.clone();
-    // tokio::task::spawn(async move {
-    //     match maintain_space_tree_buffer(&buffer_clone, SPACE_TREE_BUFFER_MAINTAIN_RATE).await {
-    //         Ok(()) => (),
-    //         Err(e) => error!("Space tree buffer maintainer failed with: '{}'.", e),
-    //     };
-    // });
 
     let buffer_clone = buffer.clone();
-    // if args.visualize {
-        tokio::task::spawn(async move {
-            match vizualize_tree(buffer_clone, VISUALIZE_TREE_REFRESH_RATE).await {
-                Ok(()) => (),
-                Err(e) => error!("Space tree buffer maintainer failed with: '{}'.", e),
-            };
-        });
+    tokio::task::spawn(async move {
+        match space_tree_manipulation_example(&buffer_clone).await {
+            Ok(()) => (),
+            Err(e) => error!("Space tree manipulation task failed with: '{}'.", e),
+        };
+    });
+
+    // Enable for coninuous visualization
+    // let buffer_clone = buffer.clone();
+    // // if args.visualize {
+    // tokio::task::spawn(async move {
+    //     match vizualize_tree(&buffer_clone, VISUALIZE_TREE_REFRESH_RATE).await {
+    //         Ok(()) => (),
+    //         Err(e) => error!("Space tree vizualization failed with: '{}'.", e),
+    //     };
+    // });
     // }
 
     let handle = std::thread::spawn(move || loop {
@@ -62,4 +57,47 @@ async fn main() -> () {
     });
 
     handle.join().unwrap();
+}
+
+pub async fn space_tree_manipulation_example(
+    buffer: &SpaceTreeServer,
+    // refresh_rate: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
+
+    let path = format!("{}/examples/data", manifest_dir);
+
+    let _ = visualize_tree_once(&buffer);
+
+    // loop {
+    tokio::time::sleep(Duration::from_millis(1000)).await;
+    buffer.load_scenario(&path, false);
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+
+    tokio::time::sleep(Duration::from_millis(1000)).await;
+    let new_transform = TransformStamped {
+        time_stamp: Instant::now(),
+        parent_frame_id: "child_13".to_string(),
+        child_frame_id: "grandchild_66".to_string(),
+        transform: json_transform_to_isometry(JsonTransform::default()),
+        json_metadata: "".to_string(),
+    };
+    
+    buffer.insert_transform("grandchild_66", new_transform.clone());
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+
+    buffer.insert_transform("grandchild_67", new_transform);
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+
+    // println!("{:?}", buffer.get_all_transform_names());
+
+    // tokio::time::sleep(Duration::from_millis(refresh_rate)).await;
+    // }
+    Ok(())
 }

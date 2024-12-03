@@ -27,6 +27,24 @@ pub struct JsonTransform {
     pub rotation: JsonRotation,
 }
 
+impl JsonTransform {
+    pub fn default() -> JsonTransform {
+        JsonTransform {
+            translation: JsonTranslation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0
+            },
+            rotation: JsonRotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                w: 1.0
+            }
+        }
+    }
+}
+
 pub fn json_transform_to_isometry(json: JsonTransform) -> Isometry3<f64> {
     let translation = Vector3::new(json.translation.x, json.translation.y, json.translation.z);
     let rotation = UnitQuaternion::from_quaternion(Quaternion::new(
