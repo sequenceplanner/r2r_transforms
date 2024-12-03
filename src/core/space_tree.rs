@@ -284,10 +284,7 @@ impl SpaceTreeServer {
                 UpdateType::Add => {
                     if name != &update_context.transform.child_frame_id {
                         println!("Transform name '{name}' in buffer doesn't match the child_frame_id {}, they should be the same. Not added.", update_context.transform.child_frame_id);
-                        return;
-                    }
-
-                    if let Some(_) = buffer.get(name) {
+                    } else if let Some(_) = buffer.get(name) {
                         println!("Transform '{}' already exists, not added.", name);
                     } else {
                         let transform = update_context.transform.clone();
@@ -295,12 +292,14 @@ impl SpaceTreeServer {
                             println!("Transform '{}' would produce cycle, not added.", name);
                         } else {
                             buffer.insert(name.to_string(), transform);
+                            println!("Inserted transform '{name}'.");
                         }
                     }
                 }
                 UpdateType::Move => {
                     if let Some(transform) = buffer.get_mut(name) {
                         transform.transform = update_context.transform.transform.clone();
+                        println!("Moved transform '{name}'.");
                     } else {
                         println!("Can't move transform '{}' because it doesn't exist.", name);
                     }
@@ -308,6 +307,7 @@ impl SpaceTreeServer {
                 UpdateType::Remove => {
                     if let Some(_) = buffer.get(name) {
                         buffer.remove(name);
+                        println!("Removed transform '{name}'.");
                     } else {
                         println!(
                             "Can't remove transform '{}' because it doesn't exist.",
@@ -324,6 +324,7 @@ impl SpaceTreeServer {
                             update_context.transform.child_frame_id.to_string(),
                             transform.clone(),
                         );
+                        println!("Renamed transform '{name}' to '{}'.", update_context.transform.child_frame_id);
                     } else {
                         println!(
                             "Can't rename transform '{}' because it doesn't exist.",
@@ -334,12 +335,14 @@ impl SpaceTreeServer {
                 UpdateType::Reparent => {
                     if let Some(transform) = buffer.get(name) {
                         let mut temp = transform.clone();
+                        let old_parent = temp.parent_frame_id;
                         temp.parent_frame_id = update_context.transform.parent_frame_id.clone();
                         if check_would_produce_cycle(&temp, &buffer) {
                             println!("Transform '{}' would produce cycle if reparented, no action taken.", name);
                         } else {
                             temp.parent_frame_id = update_context.transform.parent_frame_id.clone();
                             buffer.insert(name.clone(), temp);
+                            println!("Reparented transform '{name}' from '{}' to '{}'.", old_parent, update_context.transform.parent_frame_id);
                         }
                     } else {
                         println!(
@@ -355,8 +358,9 @@ impl SpaceTreeServer {
                             update_context.transform.child_frame_id.clone();
                         buffer.insert(
                             update_context.transform.child_frame_id.clone(),
-                            new_transform,
+                            new_transform.clone(),
                         );
+                        println!("Cloned transform '{name}' as '{}'.", new_transform.child_frame_id);
                     } else {
                         println!("Can't clone transform '{}' because it doesn't exist.", name);
                     }

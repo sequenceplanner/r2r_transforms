@@ -70,13 +70,13 @@ pub async fn space_tree_manipulation_example(
     let _ = visualize_tree_once(&buffer);
 
     // loop {
-    tokio::time::sleep(Duration::from_millis(1000)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     buffer.load_scenario(&path, false);
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
 
-    tokio::time::sleep(Duration::from_millis(1000)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let new_transform = TransformStamped {
         time_stamp: Instant::now(),
         parent_frame_id: "child_13".to_string(),
@@ -89,12 +89,47 @@ pub async fn space_tree_manipulation_example(
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.insert_transform("grandchild_67", new_transform);
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
+    buffer.move_transform("grandchild_66", json_transform_to_isometry(JsonTransform::default()));
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+
+    buffer.remove_transform("grandchild_67");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.rename_transform("grandchild_66", "grandchild_88");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.reparent_transform("grandchild_66", "child_7");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.clone_transform("grandchild_66", "child_7");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // buffer.remove_transform("grandchild_66");
+    // buffer.apply_changes();
+
+    // let _ = visualize_tree_once(&buffer);
     // println!("{:?}", buffer.get_all_transform_names());
 
     // tokio::time::sleep(Duration::from_millis(refresh_rate)).await;
