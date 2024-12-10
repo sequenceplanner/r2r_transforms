@@ -115,7 +115,7 @@ impl SpaceTreeServer {
 
         if !buffer.contains_key(name) {
             println!(
-                "Can't remove the frame '{}' to a new pose, buffer doesn't contain it.",
+                "Can't remove the frame '{}', buffer doesn't contain it.",
                 name
             );
             return;
@@ -165,7 +165,7 @@ impl SpaceTreeServer {
             },
         );
 
-        println!("Pending update: Remove transform with name '{name}' to '{rename_to}'.");
+        println!("Pending update: Rename transform with name '{name}' to '{rename_to}'.");
 
     }
 
@@ -181,7 +181,7 @@ impl SpaceTreeServer {
             return;
         }
 
-        if !buffer.contains_key(reparent_to) || reparent_to != "world" {
+        if !buffer.contains_key(reparent_to) {
             println!(
                 "Can't reparent the frame '{name}' to '{reparent_to}', reparent frame '{reparent_to}' doesn't exist.",
                 
@@ -201,7 +201,7 @@ impl SpaceTreeServer {
             },
         );
 
-        println!("Pending update: Remove transform with name '{name}' to '{reparent_to}'.");
+        println!("Pending update: Reparent transform with name '{name}' to '{reparent_to}'.");
 
     }
 
@@ -322,7 +322,7 @@ impl SpaceTreeServer {
                         buffer.remove(name);
                         buffer.insert(
                             update_context.transform.child_frame_id.to_string(),
-                            transform.clone(),
+                            temp.clone(),
                         );
                         println!("Renamed transform '{name}' to '{}'.", update_context.transform.child_frame_id);
                     } else {

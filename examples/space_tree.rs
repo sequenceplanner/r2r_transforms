@@ -126,6 +126,36 @@ pub async fn space_tree_manipulation_example(
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
+    buffer.clone_transform("grandchild_88", "grandchild_77");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.reparent_transform("grandchild_88", "child_7");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.reparent_transform("parent_b", "grandchild_88");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.remove_transform("child_15");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.delete_all_transforms();
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     // buffer.remove_transform("grandchild_66");
     // buffer.apply_changes();
 
