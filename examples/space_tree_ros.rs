@@ -129,6 +129,8 @@ pub async fn space_tree_manipulation_example(
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
+    buffer.connect_to_ros();
+
     // buffer.remove_transform("grandchild_66");
     // buffer.apply_changes();
 

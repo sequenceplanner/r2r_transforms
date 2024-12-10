@@ -1,7 +1,7 @@
-use nalgebra::{Isometry3, Quaternion, Unit};
+use nalgebra::Isometry3;
 use crate::*;
 use std::{
-    collections::HashMap, path, sync::{Arc, Mutex}
+    collections::HashMap, sync::{Arc, Mutex}
 };
 
 /// Represents the type of update to perform on a transform.
@@ -244,6 +244,8 @@ impl SpaceTreeServer {
                 transform: TransformStamped::default(),
             },
         );
+
+        println!("Pending update: Delete all transforms.");
     }
 
     pub fn lookup_transform(&self, parent_frame_id: &str, child_frame_id: &str) -> Option<TransformStamped> {
@@ -367,12 +369,52 @@ impl SpaceTreeServer {
                 }
                 UpdateType::DeleteAll => {
                     buffer.clear();
+                    println!("All transforms deleted from the buffer.");
                 }
             }
         }
 
         pending_updates.clear();
         *self.buffer.lock().unwrap() = buffer;
+    }
+
+    // This conditionally includes a method which implements r2r support
+    #[cfg(feature = "ros")]
+    pub fn connect_to_ros(&self) {
+        use r2r::std_msgs::msg::Header;
+        use r2r::tf2_msgs::msg::TFMessage;
+        use r2r::Context;
+        use std::collections::HashMap;
+        use std::sync::{Arc, Mutex};
+        use r2r::QosProfile;
+        let context = Context::create().expect("");
+        let node = r2r::Node::create(context, "r2r_transforms", "").expect("");
+        let arc_node = Arc::new(Mutex::new(node));
+
+        // let broadcasted_frames = Arc::new(Mutex::new(make_initial_tf()));
+        let arc_node_clone = arc_node.clone();
+        let static_pub_timer =
+            arc_node_clone.lock().unwrap().create_wall_timer(std::time::Duration::from_millis(100))?;
+        let static_frame_broadcaster = arc_node_clone.lock().unwrap().create_publisher::<TFMessage>(
+            "tf_static",
+            QosProfile::transient_local(QosProfile::default()),
+        )?;
+        let broadcasted_frames_clone = self.buffer.clone();
+        tokio::task::spawn(async move {
+            match static_frame_broadcaster_callback(
+                static_frame_broadcaster,
+                static_pub_timer,
+                &broadcasted_frames_clone,
+            )
+            .await
+            {
+                Ok(()) => (),
+                Err(e) => r2r::log_error!(NODE_ID, "Static frame broadcaster failed with: '{}'.", e),
+            };
+        });
+
+
+
     }
 
     // Perform the cyclic change here before adding all buffer U pending_updates

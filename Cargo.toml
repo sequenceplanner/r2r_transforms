@@ -22,4 +22,13 @@ serde_json = "1.0.127"
 serde = { version = "1.0.209", features = ["derive"] }
 
 [features]
-r2r = ["dep:r2r"]
+ros = ["dep:r2r"]
+
+[[example]]
+name = "space_tree"
+path = "examples/space_tree.rs"
+
+[[example]]
+name = "space_tree_ros"
+path = "examples/space_tree_ros.rs"
+required-features = ["ros"]
