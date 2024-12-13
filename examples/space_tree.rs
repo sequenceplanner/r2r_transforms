@@ -52,72 +52,84 @@ pub async fn space_tree_manipulation_example(
     tokio::time::sleep(Duration::from_millis(500)).await;
     let new_transform = TransformStamped {
         time_stamp: Instant::now(),
-        parent_frame_id: "child_13".to_string(),
-        child_frame_id: "grandchild_66".to_string(),
+        parent_frame_id: "frame_5".to_string(),
+        child_frame_id: "frame_6".to_string(),
         transform: json_transform_to_isometry(JsonTransform::default()),
         json_metadata: "".to_string(),
     };
     
-    buffer.insert_transform("grandchild_66", new_transform.clone());
+    buffer.insert_transform("frame_6", new_transform.clone());
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.insert_transform("grandchild_67", new_transform);
+    buffer.insert_transform("frame_7", new_transform);
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.move_transform("grandchild_66", json_transform_to_isometry(JsonTransform::default()));
+    buffer.move_transform("frame_6", json_transform_to_isometry(JsonTransform::default()));
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
 
-    buffer.remove_transform("grandchild_67");
-    buffer.apply_changes();
-
-    let _ = visualize_tree_once(&buffer);
-    tokio::time::sleep(Duration::from_millis(500)).await;
-
-    buffer.rename_transform("grandchild_66", "grandchild_88");
+    buffer.remove_transform("frame_7");
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.reparent_transform("grandchild_66", "child_7");
+    buffer.rename_transform("frame_6", "frame_8");
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.clone_transform("grandchild_66", "child_7");
+    buffer.reparent_transform("frame_6", "child_7");
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.clone_transform("grandchild_88", "grandchild_77");
+    buffer.clone_transform("frame_6", "child_7");
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.reparent_transform("grandchild_88", "child_7");
+    buffer.clone_transform("frame_8", "frame_9");
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.reparent_transform("parent_b", "grandchild_88");
+    buffer.reparent_transform("frame_8", "child_7");
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.remove_transform("child_15");
+    buffer.reparent_transform("frame_3", "frame_8");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.reparent_transform("frame_8", "frame_3");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.remove_transform("frame_9");
+    buffer.apply_changes();
+
+    let _ = visualize_tree_once(&buffer);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    buffer.remove_transform("frame_5");
     buffer.apply_changes();
 
     let _ = visualize_tree_once(&buffer);
@@ -129,13 +141,5 @@ pub async fn space_tree_manipulation_example(
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    // buffer.remove_transform("grandchild_66");
-    // buffer.apply_changes();
-
-    // let _ = visualize_tree_once(&buffer);
-    // println!("{:?}", buffer.get_all_transform_names());
-
-    // tokio::time::sleep(Duration::from_millis(refresh_rate)).await;
-    // }
     Ok(())
 }

@@ -12,7 +12,7 @@ pub use utils::loading::*;
 pub use utils::treeviz::*;
 
 // This conditionally includes a module which implements r2r support.
-#[cfg(feature = "ros")]
+// #[cfg(feature = "ros")]
 pub mod ros;
-#[cfg(feature = "ros")]
+// #[cfg(feature = "ros")]
 pub use ros::broadcasters::*;

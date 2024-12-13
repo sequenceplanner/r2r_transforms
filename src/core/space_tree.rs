@@ -4,6 +4,21 @@ use std::{
     collections::HashMap, sync::{Arc, Mutex}
 };
 
+
+// use r2r::std_msgs::msg::Header;
+use r2r::tf2_msgs::msg::TFMessage;
+// use r2r::Context;
+use r2r::QosProfile;
+
+
+#[cfg(feature = "ros")]
+use {
+    r2r::std_msgs::msg::Header,
+    r2r::tf2_msgs::msg::TFMessage,
+    r2r::Context,
+    r2r::QosProfile
+};
+
 /// Represents the type of update to perform on a transform.
 #[derive(Clone, Debug)]
 enum UpdateType {
@@ -379,24 +394,16 @@ impl SpaceTreeServer {
     }
 
     // This conditionally includes a method which implements r2r support
-    #[cfg(feature = "ros")]
-    pub fn connect_to_ros(&self) {
-        use r2r::std_msgs::msg::Header;
-        use r2r::tf2_msgs::msg::TFMessage;
-        use r2r::Context;
-        use std::collections::HashMap;
-        use std::sync::{Arc, Mutex};
-        use r2r::QosProfile;
-        let context = Context::create().expect("");
-        let node = r2r::Node::create(context, "r2r_transforms", "").expect("");
-        let arc_node = Arc::new(Mutex::new(node));
-
-        // let broadcasted_frames = Arc::new(Mutex::new(make_initial_tf()));
-        let arc_node_clone = arc_node.clone();
+    // #[cfg(feature = "ros")]
+    pub async fn connect_to_ros(&self, node: &Arc<Mutex<r2r::Node>>) -> Result<(), Box<dyn std::error::Error>> {
+    
         let static_pub_timer =
-            arc_node_clone.lock().unwrap().create_wall_timer(std::time::Duration::from_millis(100))?;
-        let static_frame_broadcaster = arc_node_clone.lock().unwrap().create_publisher::<TFMessage>(
-            "tf_static",
+            node.lock()
+        .unwrap().create_wall_timer(std::time::Duration::from_millis(100))?;
+        let static_frame_broadcaster = node
+        .lock()
+        .unwrap().create_publisher::<TFMessage>(
+            "tf",
             QosProfile::transient_local(QosProfile::default()),
         )?;
         let broadcasted_frames_clone = self.buffer.clone();
@@ -409,11 +416,11 @@ impl SpaceTreeServer {
             .await
             {
                 Ok(()) => (),
-                Err(e) => r2r::log_error!(NODE_ID, "Static frame broadcaster failed with: '{}'.", e),
+                Err(e) => r2r::log_error!("r2r_transforms", "Static frame broadcaster failed with: '{}'.", e),
             };
         });
 
-
+        Ok(())
 
     }
 
