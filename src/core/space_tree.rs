@@ -3,6 +3,7 @@ use crate::*;
 use std::{
     collections::HashMap, sync::{Arc, Mutex}
 };
+use log;
 
 
 // use r2r::std_msgs::msg::Header;
@@ -90,7 +91,8 @@ impl SpaceTreeServer {
         update_context.update_type = UpdateType::Add;
         update_context.transform = transform;
 
-        println!("Pending update: Insert transform with name '{}'", name);
+        log::info!("Pending update: Insert transform with name '{}'", name);
+        // log::info!("Pending update: Insert transform with name '{}'", name);
     }
 
     pub fn move_transform(&self, name: &str, pose: Isometry3<f64>) {
@@ -98,7 +100,7 @@ impl SpaceTreeServer {
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !buffer.contains_key(name) {
-            println!(
+            log::info!(
                 "Can't move the frame '{}' to a new pose, buffer doesn't contain it.",
                 name
             );
@@ -121,7 +123,7 @@ impl SpaceTreeServer {
         update_context.update_type = UpdateType::Move;
         update_context.transform.transform = pose;
 
-        println!("Pending update: Move transform with name '{}'", name);
+        log::info!("Pending update: Move transform with name '{}'", name);
     }
 
     pub fn remove_transform(&self, name: &str) {
@@ -129,7 +131,7 @@ impl SpaceTreeServer {
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !buffer.contains_key(name) {
-            println!(
+            log::info!(
                 "Can't remove the frame '{}', buffer doesn't contain it.",
                 name
             );
@@ -144,7 +146,7 @@ impl SpaceTreeServer {
             },
         );
 
-        println!("Pending update: Remove transform with name '{}'", name);
+        log::info!("Pending update: Remove transform with name '{}'", name);
 
     }
 
@@ -153,7 +155,7 @@ impl SpaceTreeServer {
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !buffer.contains_key(name) {
-            println!(
+            log::info!(
                 "Can't rename the frame '{}', buffer doesn't contain it.",
                 name
             );
@@ -161,7 +163,7 @@ impl SpaceTreeServer {
         }
 
         if buffer.contains_key(rename_to) {
-            println!(
+            log::info!(
                 "Can't rename the frame '{name}' to '{rename_to}', buffer already contains '{rename_to}'.",
                 
             );
@@ -180,7 +182,7 @@ impl SpaceTreeServer {
             },
         );
 
-        println!("Pending update: Rename transform with name '{name}' to '{rename_to}'.");
+        log::info!("Pending update: Rename transform with name '{name}' to '{rename_to}'.");
 
     }
 
@@ -189,7 +191,7 @@ impl SpaceTreeServer {
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !buffer.contains_key(name) {
-            println!(
+            log::info!(
                 "Can't reparent the frame '{}', buffer doesn't contain it.",
                 name
             );
@@ -197,7 +199,7 @@ impl SpaceTreeServer {
         }
 
         if !buffer.contains_key(reparent_to) {
-            println!(
+            log::info!(
                 "Can't reparent the frame '{name}' to '{reparent_to}', reparent frame '{reparent_to}' doesn't exist.",
                 
             );
@@ -216,7 +218,7 @@ impl SpaceTreeServer {
             },
         );
 
-        println!("Pending update: Reparent transform with name '{name}' to '{reparent_to}'.");
+        log::info!("Pending update: Reparent transform with name '{name}' to '{reparent_to}'.");
 
     }
 
@@ -225,7 +227,7 @@ impl SpaceTreeServer {
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !buffer.contains_key(name) {
-            println!(
+            log::info!(
                 "Can't clone the frame '{}', buffer doesn't contain it.",
                 name
             );
@@ -244,7 +246,7 @@ impl SpaceTreeServer {
             },
         );
 
-        println!("Pending update: Clone transform with name '{name}' to '{clone_name}'.");
+        log::info!("Pending update: Clone transform with name '{name}' to '{clone_name}'.");
 
     }
 
@@ -260,7 +262,7 @@ impl SpaceTreeServer {
             },
         );
 
-        println!("Pending update: Delete all transforms.");
+        log::info!("Pending update: Delete all transforms.");
     }
 
     pub fn lookup_transform(&self, parent_frame_id: &str, child_frame_id: &str) -> Option<TransformStamped> {
@@ -292,7 +294,7 @@ impl SpaceTreeServer {
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if pending_updates.is_empty() {
-            println!("No changes to apply");
+            log::info!("No changes to apply");
             return;
         }
 
@@ -300,33 +302,33 @@ impl SpaceTreeServer {
             match update_context.update_type {
                 UpdateType::Add => {
                     if name != &update_context.transform.child_frame_id {
-                        println!("Transform name '{name}' in buffer doesn't match the child_frame_id {}, they should be the same. Not added.", update_context.transform.child_frame_id);
+                        log::info!("Transform name '{name}' in buffer doesn't match the child_frame_id {}, they should be the same. Not added.", update_context.transform.child_frame_id);
                     } else if let Some(_) = buffer.get(name) {
-                        println!("Transform '{}' already exists, not added.", name);
+                        log::info!("Transform '{}' already exists, not added.", name);
                     } else {
                         let transform = update_context.transform.clone();
                         if check_would_produce_cycle(&transform, &buffer) {
-                            println!("Transform '{}' would produce cycle, not added.", name);
+                            log::info!("Transform '{}' would produce cycle, not added.", name);
                         } else {
                             buffer.insert(name.to_string(), transform);
-                            println!("Inserted transform '{name}'.");
+                            log::info!("Inserted transform '{name}'.");
                         }
                     }
                 }
                 UpdateType::Move => {
                     if let Some(transform) = buffer.get_mut(name) {
                         transform.transform = update_context.transform.transform.clone();
-                        println!("Moved transform '{name}'.");
+                        log::info!("Moved transform '{name}'.");
                     } else {
-                        println!("Can't move transform '{}' because it doesn't exist.", name);
+                        log::info!("Can't move transform '{}' because it doesn't exist.", name);
                     }
                 }
                 UpdateType::Remove => {
                     if let Some(_) = buffer.get(name) {
                         buffer.remove(name);
-                        println!("Removed transform '{name}'.");
+                        log::info!("Removed transform '{name}'.");
                     } else {
-                        println!(
+                        log::info!(
                             "Can't remove transform '{}' because it doesn't exist.",
                             name
                         );
@@ -341,9 +343,9 @@ impl SpaceTreeServer {
                             update_context.transform.child_frame_id.to_string(),
                             temp.clone(),
                         );
-                        println!("Renamed transform '{name}' to '{}'.", update_context.transform.child_frame_id);
+                        log::info!("Renamed transform '{name}' to '{}'.", update_context.transform.child_frame_id);
                     } else {
-                        println!(
+                        log::info!(
                             "Can't rename transform '{}' because it doesn't exist.",
                             name
                         );
@@ -355,14 +357,14 @@ impl SpaceTreeServer {
                         let old_parent = temp.parent_frame_id;
                         temp.parent_frame_id = update_context.transform.parent_frame_id.clone();
                         if check_would_produce_cycle(&temp, &buffer) {
-                            println!("Transform '{}' would produce cycle if reparented, no action taken.", name);
+                            log::info!("Transform '{}' would produce cycle if reparented, no action taken.", name);
                         } else {
                             temp.parent_frame_id = update_context.transform.parent_frame_id.clone();
                             buffer.insert(name.clone(), temp);
-                            println!("Reparented transform '{name}' from '{}' to '{}'.", old_parent, update_context.transform.parent_frame_id);
+                            log::info!("Reparented transform '{name}' from '{}' to '{}'.", old_parent, update_context.transform.parent_frame_id);
                         }
                     } else {
-                        println!(
+                        log::info!(
                             "Can't reparent transform '{}' because it doesn't exist.",
                             name
                         );
@@ -377,14 +379,14 @@ impl SpaceTreeServer {
                             update_context.transform.child_frame_id.clone(),
                             new_transform.clone(),
                         );
-                        println!("Cloned transform '{name}' as '{}'.", new_transform.child_frame_id);
+                        log::info!("Cloned transform '{name}' as '{}'.", new_transform.child_frame_id);
                     } else {
-                        println!("Can't clone transform '{}' because it doesn't exist.", name);
+                        log::info!("Can't clone transform '{}' because it doesn't exist.", name);
                     }
                 }
                 UpdateType::DeleteAll => {
                     buffer.clear();
-                    println!("All transforms deleted from the buffer.");
+                    log::info!("All transforms deleted from the buffer.");
                 }
             }
         }
@@ -397,10 +399,33 @@ impl SpaceTreeServer {
     // #[cfg(feature = "ros")]
     pub async fn connect_to_ros(&self, node: &Arc<Mutex<r2r::Node>>) -> Result<(), Box<dyn std::error::Error>> {
     
-        let static_pub_timer =
+        // let static_pub_timer =
+        //     node.lock()
+        // .unwrap().create_wall_timer(std::time::Duration::from_millis(100))?;
+        // let static_frame_broadcaster = node
+        // .lock()
+        // .unwrap().create_publisher::<TFMessage>(
+        //     "tf_static",
+        //     QosProfile::transient_local(QosProfile::default()),
+        // )?;
+        // let broadcasted_frames_clone = self.buffer.clone();
+        // tokio::task::spawn(async move {
+        //     match static_frame_broadcaster_callback(
+        //         static_frame_broadcaster,
+        //         static_pub_timer,
+        //         &broadcasted_frames_clone,
+        //     )
+        //     .await
+        //     {
+        //         Ok(()) => (),
+        //         Err(e) => r2r::log_error!("r2r_transforms", "Static frame broadcaster failed with: '{}'.", e),
+        //     };
+        // });
+
+        let active_pub_timer =
             node.lock()
         .unwrap().create_wall_timer(std::time::Duration::from_millis(100))?;
-        let static_frame_broadcaster = node
+        let active_frame_broadcaster = node
         .lock()
         .unwrap().create_publisher::<TFMessage>(
             "tf",
@@ -408,21 +433,27 @@ impl SpaceTreeServer {
         )?;
         let broadcasted_frames_clone = self.buffer.clone();
         tokio::task::spawn(async move {
-            match static_frame_broadcaster_callback(
-                static_frame_broadcaster,
-                static_pub_timer,
+            match active_frame_broadcaster_callback(
+                active_frame_broadcaster,
+                active_pub_timer,
                 &broadcasted_frames_clone,
             )
             .await
             {
                 Ok(()) => (),
-                Err(e) => r2r::log_error!("r2r_transforms", "Static frame broadcaster failed with: '{}'.", e),
+                Err(e) => r2r::log_error!("r2r_transforms", "Active frame broadcaster failed with: '{}'.", e),
             };
         });
 
         Ok(())
 
     }
+
+    // pub async fn start_gui(&self) -> Result<(), Box<dyn std::error::Error>> {
+    //     let frames = self.buffer.clone();
+    //     run_tui(&frames);
+    //     Ok(())
+    // }
 
     // Perform the cyclic change here before adding all buffer U pending_updates
 }

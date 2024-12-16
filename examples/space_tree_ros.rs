@@ -164,11 +164,11 @@ pub async fn space_tree_manipulation_example(
     let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.delete_all_transforms();
-    buffer.apply_changes();
+    // buffer.delete_all_transforms();
+    // buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    // let _ = visualize_tree_once(&buffer);
+    // tokio::time::sleep(Duration::from_millis(500)).await;
 
     Ok(())
 }
