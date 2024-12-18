@@ -1,81 +1,70 @@
-// use crate::TransformStamped;
-// use futures::Stream;
-// use r2r::geometry_msgs::msg::{
-//     Quaternion, Transform, TransformStamped as TransformStampedMsg, Vector3,
-// };
-// use r2r::std_msgs::msg::Header;
-// use r2r::tf2_msgs::msg::TFMessage;
-// use serde_json::Value;
-// use std::collections::HashMap;
-// use std::sync::{Arc, Mutex};
+use crate::*;
+use futures::{Stream, StreamExt};
+use r2r::tf2_msgs::msg::TFMessage;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
-// // updates the buffer with active frames from the tf topic
-// // TODO: if a stale active frame is on the tf for some reason, don't include it
-// // TODO: active frames should be merged with extra data from broadcaster.
-// pub async fn active_tf_listener_callback(
-//     mut subscriber: impl Stream<Item = TFMessage> + Unpin,
-//     buffered_frames: &Arc<Mutex<HashMap<String, TransformStamped>>>,
-//     node_id: &str,
-// ) -> Result<(), Box<dyn std::error::Error>> {
-//     loop {
-//         match subscriber.next().await {
-//             Some(message) => {
-//                 let mut frames_local = buffered_frames.lock().unwrap().clone();
-//                 message.transforms.iter().for_each(|t| {
-//                     frames_local.insert(
-//                         t.child_frame_id.clone(),
-//                         FrameData {
-//                             parent_frame_id: t.header.frame_id.clone(),
-//                             child_frame_id: t.child_frame_id.clone(),
-//                             transform: t.transform.clone(),
-//                             extra_data: ExtraData {
-//                                 active: Some(true),
-//                                 time_stamp: Some(t.header.stamp.clone()),
-//                                 ..Default::default()
-//                             },
-//                         },
-//                     );
-//                 });
-//                 *buffered_frames.lock().unwrap() = frames_local;
-//             }
-//             None => {
-//                 r2r::log_error!(node_id, "Subscriber did not get the message?");
-//             }
-//         }
-//     }
-// }
+// updates the buffer with active frames from the tf topic
+// TODO: if a stale active frame is on the tf for some reason, don't include it
+// TODO: active frames should be merged with extra data from broadcaster.
+pub async fn active_tf_listener_callback(
+    mut subscriber: impl Stream<Item = TFMessage> + Unpin,
+    global_buffer: &Arc<Mutex<HashMap<String, TransformStamped>>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    loop {
+        match subscriber.next().await {
+            Some(message) => {
+                let mut frames_local = global_buffer.lock().unwrap().clone();
+                message.transforms.iter().for_each(|t| {
+                    frames_local.insert(
+                        t.child_frame_id.clone(),
+                        TransformStamped {
+                            active: true,
+                            time_stamp: Instant::now(), // TODO: use t.header.stamp,
+                            parent_frame_id: t.header.frame_id.clone(),
+                            child_frame_id: t.child_frame_id.clone(),
+                            transform: ros_transform_to_isometry(t.transform.clone()),
+                            json_metadata: "".to_string()
+                        },
+                    );
+                });
+                *global_buffer.lock().unwrap() = frames_local;
+            }
+            None => {
+                r2r::log_error!("r2r_transforms", "Subscriber did not get the message?");
+            }
+        }
+    }
+}
 
-// // updates the buffer with static frames from the tf_static topic
-// pub async fn static_tf_listener_callback(
-//     mut subscriber: impl Stream<Item = TFMessage> + Unpin,
-//     buffered_frames: &Arc<Mutex<HashMap<String, FrameData>>>,
-//     node_id: &str,
-// ) -> Result<(), Box<dyn std::error::Error>> {
-//     loop {
-//         match subscriber.next().await {
-//             Some(message) => {
-//                 let mut frames_local = buffered_frames.lock().unwrap().clone();
-//                 message.transforms.iter().for_each(|t| {
-//                     // static frames are always true, so we don't need to check their timestamp
-//                     frames_local.insert(
-//                         t.child_frame_id.clone(),
-//                         FrameData {
-//                             parent_frame_id: t.header.frame_id.clone(),
-//                             child_frame_id: t.child_frame_id.clone(),
-//                             transform: t.transform.clone(),
-//                             extra_data: ExtraData {
-//                                 active: Some(false),
-//                                 time_stamp: Some(t.header.stamp.clone()),
-//                                 ..Default::default()
-//                             },
-//                         },
-//                     );
-//                 });
-//                 *buffered_frames.lock().unwrap() = frames_local;
-//             }
-//             None => {
-//                 r2r::log_error!(node_id, "Subscriber did not get the message?");
-//             }
-//         }
-//     }
-// }
+pub async fn static_tf_listener_callback(
+    mut subscriber: impl Stream<Item = TFMessage> + Unpin,
+    global_buffer: &Arc<Mutex<HashMap<String, TransformStamped>>>
+) -> Result<(), Box<dyn std::error::Error>> {
+    loop {
+        match subscriber.next().await {
+            Some(message) => {
+                let mut frames_local = global_buffer.lock().unwrap().clone();
+                println!("{:?}", frames_local.keys());
+                message.transforms.iter().for_each(|t| {
+                    frames_local.insert(
+                        t.child_frame_id.clone(),
+                        TransformStamped {
+                            active: false,
+                            time_stamp: Instant::now(), // TODO: use t.header.stamp,
+                            parent_frame_id: t.header.frame_id.clone(),
+                            child_frame_id: t.child_frame_id.clone(),
+                            transform: ros_transform_to_isometry(t.transform.clone()),
+                            json_metadata: "".to_string()
+                        },
+                    );
+                });
+                *global_buffer.lock().unwrap() = frames_local;
+            }
+            None => {
+                r2r::log_error!("r2r_transforms", "Subscriber did not get the message?");
+            }
+        }
+    }
+}

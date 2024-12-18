@@ -5,6 +5,13 @@ use std::{
 };
 use log;
 
+
+// use r2r::std_msgs::msg::Header;
+use r2r::tf2_msgs::msg::TFMessage;
+// use r2r::Context;
+use r2r::QosProfile;
+
+
 /// Represents the type of update to perform on a transform.
 #[derive(Clone, Debug)]
 enum UpdateType {
@@ -26,7 +33,7 @@ struct UpdateContext {
 
 /// A server that maintains a spatial tree buffer of transforms.
 #[derive(Clone)]
-pub struct SpaceTreeServer {
+pub struct RosSpaceTreeServer {
     pub name: String,
     // These are the transforms that we are in control of
     pub local_buffer: Arc<Mutex<HashMap<String, TransformStamped>>>,
@@ -36,12 +43,102 @@ pub struct SpaceTreeServer {
     pending_updates: Arc<Mutex<HashMap<String, UpdateContext>>>,
 }
 
-impl SpaceTreeServer {
-    pub fn new(name: &str) -> Self {
+impl RosSpaceTreeServer {
+    pub fn new(name: &str, node: &Arc<Mutex<r2r::Node>>) -> Self {
+
+        let local_buffer = Arc::new(Mutex::new(HashMap::new()));
+        let global_buffer = Arc::new(Mutex::new(HashMap::new()));
+
+        let static_pub_timer = node
+            .lock()
+            .unwrap()
+            .create_wall_timer(std::time::Duration::from_millis(STATIC_TF_BROADCAST_RATE))
+            .expect("Failed to initialize static_pub_timer.");
+
+        let static_frame_broadcaster = node
+            .lock()
+            .unwrap().create_publisher::<TFMessage>(
+                "tf_static",
+                QosProfile::transient_local(QosProfile::default()),
+            ).expect("Failed to initialize static_frame_broadcaster.");
+
+        let local_buffer_clone = local_buffer.clone();
+        tokio::task::spawn(async move {
+            match static_frame_broadcaster_callback(
+                static_frame_broadcaster,
+                static_pub_timer,
+                &local_buffer_clone,
+            )
+            .await
+            {
+                Ok(()) => (),
+                Err(e) => r2r::log_error!("r2r_transforms", "Static frame broadcaster failed with: '{}'.", e),
+            };
+        });
+
+        let active_pub_timer = node
+            .lock()
+            .unwrap()
+            .create_wall_timer(std::time::Duration::from_millis(ACTIVE_TF_BROADCAST_RATE))
+            .expect("Failed to initialize active_pub_timer.");
+
+        let active_frame_broadcaster = node
+            .lock()
+            .unwrap().create_publisher::<TFMessage>(
+                "tf",
+                QosProfile::transient_local(QosProfile::default()),
+            ).expect("Failed to initialize active_frame_broadcaster.");
+
+        let local_buffer_clone = local_buffer.clone();
+        tokio::task::spawn(async move {
+            match active_frame_broadcaster_callback(
+                active_frame_broadcaster,
+                active_pub_timer,
+                &local_buffer_clone,
+            )
+            .await
+            {
+                Ok(()) => (),
+                Err(e) => r2r::log_error!("r2r_transforms", "Active frame broadcaster failed with: '{}'.", e),
+            };
+        });
+
+        let active_tf_listener =
+            node.lock().unwrap().subscribe::<TFMessage>("tf", QosProfile::transient_local(QosProfile::default())).expect("Failed to initialize active_tf_listener.");
+        let global_buffer_clone = global_buffer.clone();
+        tokio::task::spawn(async move {
+            match active_tf_listener_callback(
+                active_tf_listener,
+                &global_buffer_clone.clone(),
+            )
+            .await
+            {
+                Ok(()) => (),
+                Err(e) => r2r::log_error!("r2r_transforms", "Active tf listener failed with: '{}'.", e),
+            };
+        });
+
+        let static_tf_listener =
+            node.lock().unwrap().subscribe::<TFMessage>("tf_static", QosProfile::best_effort(QosProfile::default())).expect("Failed to initialize static_tf_listener.");
+        let global_buffer_clone = global_buffer.clone();
+        tokio::task::spawn(async move {
+            match static_tf_listener_callback(
+                static_tf_listener,
+                &global_buffer_clone.clone(),
+            )
+            .await
+            {
+                Ok(()) => (),
+                Err(e) => r2r::log_error!("r2r_transforms", "Static tf listener failed with: '{}'.", e),
+            };
+        });
+
+        let local_buffer_clone = local_buffer.clone();
+        let global_buffer_clone = global_buffer.clone();
         Self {
             name: name.to_string(),
-            local_buffer: Arc::new(Mutex::new(HashMap::new())),
-            global_buffer: Arc::new(Mutex::new(HashMap::new())),
+            local_buffer: local_buffer_clone,
+            global_buffer: global_buffer_clone,
             pending_updates: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -60,7 +157,6 @@ impl SpaceTreeServer {
                         .get(&frame.child_frame_id) == None)
                         .for_each(|frame| Self::insert_transform(&self, &frame.child_frame_id, frame.clone()));
                 }
-                // Self::apply_changes(&self);
             },
             Err(_) => return
         }
@@ -82,7 +178,6 @@ impl SpaceTreeServer {
         update_context.transform = transform;
 
         log::info!("Pending update: Insert transform with name '{}'", name);
-        // log::info!("Pending update: Insert transform with name '{}'", name);
     }
 
     pub fn move_transform(&self, name: &str, pose: Isometry3<f64>) {
@@ -141,10 +236,11 @@ impl SpaceTreeServer {
     }
 
     pub fn rename_transform(&self, name: &str, rename_to: &str) {
-        let buffer = self.local_buffer.lock().unwrap();
+        let local_buffer = self.local_buffer.lock().unwrap();
+        let global_buffer = self.global_buffer.lock().unwrap();
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
-        if !buffer.contains_key(name) {
+        if !local_buffer.contains_key(name) {
             log::info!(
                 "Can't rename the frame '{}', buffer doesn't contain it.",
                 name
@@ -152,9 +248,9 @@ impl SpaceTreeServer {
             return;
         }
 
-        if buffer.contains_key(rename_to) {
+        if global_buffer.contains_key(rename_to) {
             log::info!(
-                "Can't rename the frame '{name}' to '{rename_to}', buffer already contains '{rename_to}'.",
+                "Can't rename the frame '{name}' to '{rename_to}', '{rename_to}' already exists.",
                 
             );
             return;
@@ -178,6 +274,7 @@ impl SpaceTreeServer {
 
     pub fn reparent_transform(&self, name: &str, reparent_to: &str) {
         let local_buffer = self.local_buffer.lock().unwrap();
+        let global_buffer = self.global_buffer.lock().unwrap();
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !local_buffer.contains_key(name) {
@@ -188,7 +285,7 @@ impl SpaceTreeServer {
             return;
         }
 
-        if !local_buffer.contains_key(reparent_to) {
+        if !global_buffer.contains_key(reparent_to) {
             log::info!(
                 "Can't reparent the frame '{name}' to '{reparent_to}', reparent frame '{reparent_to}' doesn't exist.",
                 
@@ -213,12 +310,12 @@ impl SpaceTreeServer {
     }
 
     pub fn clone_transform(&self, name: &str, clone_name: &str) {
-        let local_buffer = self.local_buffer.lock().unwrap();
+        let global_buffer = self.global_buffer.lock().unwrap();
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
-        if !local_buffer.contains_key(name) {
+        if !global_buffer.contains_key(name){
             log::info!(
-                "Can't clone the frame '{}', buffer doesn't contain it.",
+                "Can't clone the frame '{}', it doesn't exist.",
                 name
             );
             return;
@@ -252,35 +349,35 @@ impl SpaceTreeServer {
             },
         );
 
-        log::info!("Pending update: Delete all transforms.");
+        log::info!("Pending update: Delete all (local) transforms.");
     }
 
     pub fn lookup_transform(&self, parent_frame_id: &str, child_frame_id: &str) -> Option<TransformStamped> {
-        let buffer = self.local_buffer.lock().unwrap();
+        let buffer = self.global_buffer.lock().unwrap();
         match get_tree_root(&buffer) {
             Some(root) => {
-                lookup_transform(parent_frame_id, child_frame_id, &root, &self.local_buffer)
+                lookup_transform(parent_frame_id, child_frame_id, &root, &self.global_buffer)
             },
             None => {
-                lookup_transform(parent_frame_id, child_frame_id, "world", &self.local_buffer)
+                lookup_transform(parent_frame_id, child_frame_id, "world", &self.global_buffer)
             }
         }
         
     }
 
     pub fn lookup_with_root(&self, parent_frame_id: &str, child_frame_id: &str, root_frame_id: &str) -> Option<TransformStamped> {
-        lookup_transform(parent_frame_id, child_frame_id, root_frame_id, &self.local_buffer)
+        lookup_transform(parent_frame_id, child_frame_id, root_frame_id, &self.global_buffer)
     }
 
     pub fn get_all_transform_names(&self) -> Vec<String> {
-        let buffer = self.local_buffer.lock().unwrap();
+        let buffer = self.global_buffer.lock().unwrap();
         buffer.keys().map(|k| k.to_owned()).collect::<Vec<String>>()
     }
 
     /// Applies pending updates to the transform buffer.
-    /// TODO: Sort out the connection with ROS /tf
     pub fn apply_changes(&self) {
-        let mut buffer = self.local_buffer.lock().unwrap().clone();
+        let mut local_buffer = self.local_buffer.lock().unwrap().clone();
+        let global_buffer = self.global_buffer.lock().unwrap().clone();
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if pending_updates.is_empty() {
@@ -293,20 +390,20 @@ impl SpaceTreeServer {
                 UpdateType::Add => {
                     if name != &update_context.transform.child_frame_id {
                         log::info!("Transform name '{name}' in buffer doesn't match the child_frame_id {}, they should be the same. Not added.", update_context.transform.child_frame_id);
-                    } else if let Some(_) = buffer.get(name) {
+                    } else if let Some(_) = global_buffer.get(name) {
                         log::info!("Transform '{}' already exists, not added.", name);
                     } else {
                         let transform = update_context.transform.clone();
-                        if check_would_produce_cycle(&transform, &buffer) {
+                        if check_would_produce_cycle(&transform, &global_buffer) {
                             log::info!("Transform '{}' would produce cycle, not added.", name);
                         } else {
-                            buffer.insert(name.to_string(), transform);
+                            local_buffer.insert(name.to_string(), transform);
                             log::info!("Inserted transform '{name}'.");
                         }
                     }
                 }
                 UpdateType::Move => {
-                    if let Some(transform) = buffer.get_mut(name) {
+                    if let Some(transform) = local_buffer.get_mut(name) {
                         transform.transform = update_context.transform.transform.clone();
                         log::info!("Moved transform '{name}'.");
                     } else {
@@ -314,8 +411,8 @@ impl SpaceTreeServer {
                     }
                 }
                 UpdateType::Remove => {
-                    if let Some(_) = buffer.get(name) {
-                        buffer.remove(name);
+                    if let Some(_) = local_buffer.get(name) {
+                        local_buffer.remove(name);
                         log::info!("Removed transform '{name}'.");
                     } else {
                         log::info!(
@@ -325,11 +422,11 @@ impl SpaceTreeServer {
                     }
                 }
                 UpdateType::Rename => {
-                    if let Some(transform) = buffer.clone().get(name) {
+                    if let Some(transform) = local_buffer.clone().get(name) {
                         let mut temp = transform.clone();
                         temp.child_frame_id = update_context.transform.child_frame_id.clone();
-                        buffer.remove(name);
-                        buffer.insert(
+                        local_buffer.remove(name);
+                        local_buffer.insert(
                             update_context.transform.child_frame_id.to_string(),
                             temp.clone(),
                         );
@@ -342,15 +439,15 @@ impl SpaceTreeServer {
                     }
                 }
                 UpdateType::Reparent => {
-                    if let Some(transform) = buffer.get(name) {
+                    if let Some(transform) = local_buffer.get(name) {
                         let mut temp = transform.clone();
                         let old_parent = temp.parent_frame_id;
                         temp.parent_frame_id = update_context.transform.parent_frame_id.clone();
-                        if check_would_produce_cycle(&temp, &buffer) {
+                        if check_would_produce_cycle(&temp, &global_buffer) {
                             log::info!("Transform '{}' would produce cycle if reparented, no action taken.", name);
                         } else {
                             temp.parent_frame_id = update_context.transform.parent_frame_id.clone();
-                            buffer.insert(name.clone(), temp);
+                            local_buffer.insert(name.clone(), temp);
                             log::info!("Reparented transform '{name}' from '{}' to '{}'.", old_parent, update_context.transform.parent_frame_id);
                         }
                     } else {
@@ -361,11 +458,11 @@ impl SpaceTreeServer {
                     }
                 }
                 UpdateType::Clone => {
-                    if let Some(transform) = buffer.get(name) {
+                    if let Some(transform) = global_buffer.get(name) {
                         let mut new_transform = transform.clone();
                         new_transform.child_frame_id =
                             update_context.transform.child_frame_id.clone();
-                        buffer.insert(
+                        local_buffer.insert(
                             update_context.transform.child_frame_id.clone(),
                             new_transform.clone(),
                         );
@@ -375,13 +472,75 @@ impl SpaceTreeServer {
                     }
                 }
                 UpdateType::DeleteAll => {
-                    buffer.clear();
-                    log::info!("All transforms deleted from the buffer.");
+                    local_buffer.clear();
+                    log::info!("All transforms deleted from the (local) buffer.");
                 }
             }
         }
 
         pending_updates.clear();
-        *self.local_buffer.lock().unwrap() = buffer;
+        *self.local_buffer.lock().unwrap() = local_buffer;
     }
+
+    // This conditionally includes a method which implements r2r support
+    // #[cfg(feature = "ros")]
+    // pub async fn connect_to_ros(&self, node: &Arc<Mutex<r2r::Node>>) -> Result<(), Box<dyn std::error::Error>> {
+    
+    //     // let static_pub_timer =
+    //     //     node.lock()
+    //     // .unwrap().create_wall_timer(std::time::Duration::from_millis(100))?;
+    //     // let static_frame_broadcaster = node
+    //     // .lock()
+    //     // .unwrap().create_publisher::<TFMessage>(
+    //     //     "tf_static",
+    //     //     QosProfile::transient_local(QosProfile::default()),
+    //     // )?;
+    //     // let broadcasted_frames_clone = self.buffer.clone();
+    //     // tokio::task::spawn(async move {
+    //     //     match static_frame_broadcaster_callback(
+    //     //         static_frame_broadcaster,
+    //     //         static_pub_timer,
+    //     //         &broadcasted_frames_clone,
+    //     //     )
+    //     //     .await
+    //     //     {
+    //     //         Ok(()) => (),
+    //     //         Err(e) => r2r::log_error!("r2r_transforms", "Static frame broadcaster failed with: '{}'.", e),
+    //     //     };
+    //     // });
+
+    //     let active_pub_timer =
+    //         node.lock()
+    //     .unwrap().create_wall_timer(std::time::Duration::from_millis(100))?;
+    //     let active_frame_broadcaster = node
+    //     .lock()
+    //     .unwrap().create_publisher::<TFMessage>(
+    //         "tf",
+    //         QosProfile::transient_local(QosProfile::default()),
+    //     )?;
+    //     let broadcasted_frames_clone = self.buffer.clone();
+    //     tokio::task::spawn(async move {
+    //         match active_frame_broadcaster_callback(
+    //             active_frame_broadcaster,
+    //             active_pub_timer,
+    //             &broadcasted_frames_clone,
+    //         )
+    //         .await
+    //         {
+    //             Ok(()) => (),
+    //             Err(e) => r2r::log_error!("r2r_transforms", "Active frame broadcaster failed with: '{}'.", e),
+    //         };
+    //     });
+
+    //     Ok(())
+
+    // }
+
+    // pub async fn start_gui(&self) -> Result<(), Box<dyn std::error::Error>> {
+    //     let frames = self.buffer.clone();
+    //     run_tui(&frames);
+    //     Ok(())
+    // }
+
+    // Perform the cyclic change here before adding all buffer U pending_updates
 }

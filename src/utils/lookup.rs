@@ -27,6 +27,7 @@ pub fn lookup_transform(
                     chain.push(down_chain);
                     let iso_3 = isometry_chain_product(chain);
                     Some(TransformStamped {
+                        active: buffer_local.get(child_frame_id).unwrap().active,
                         time_stamp: Instant::now(),
                         parent_frame_id: parent_frame_id.to_string(),
                         child_frame_id: child_frame_id.to_string(),
@@ -399,6 +400,7 @@ mod tests {
             (
                 "finger".to_string(),
                 TransformStamped {
+                    active: true,
                     time_stamp: Instant::now(),
                     child_frame_id: "finger".to_string(),
                     parent_frame_id: "hand".to_string(),
@@ -416,6 +418,7 @@ mod tests {
             (
                 "hand".to_string(),
                 TransformStamped {
+                    active: true,
                     time_stamp: Instant::now(),
                     child_frame_id: "hand".to_string(),
                     parent_frame_id: "elbow".to_string(),
@@ -433,6 +436,7 @@ mod tests {
             (
                 "elbow".to_string(),
                 TransformStamped {
+                    active: true,
                     time_stamp: Instant::now(),
                     child_frame_id: "elbow".to_string(),
                     parent_frame_id: "shoulder".to_string(),
@@ -450,6 +454,7 @@ mod tests {
             (
                 "shoulder".to_string(),
                 TransformStamped {
+                    active: false,
                     time_stamp: Instant::now(),
                     child_frame_id: "shoulder".to_string(),
                     parent_frame_id: "world".to_string(),
@@ -474,6 +479,7 @@ mod tests {
 
     fn dummy_1_frame() -> TransformStamped {
         TransformStamped {
+            active: false,
             time_stamp: Instant::now(),
             parent_frame_id: "world".to_string(),
             child_frame_id: "dummy_1".to_string(),
@@ -484,6 +490,7 @@ mod tests {
 
     fn dummy_2_frame() -> TransformStamped {
         TransformStamped {
+            active: true,
             time_stamp: Instant::now(),
             parent_frame_id: "dummy_1".to_string(),
             child_frame_id: "dummy_2".to_string(),
@@ -494,6 +501,7 @@ mod tests {
 
     fn dummy_3_frame() -> TransformStamped {
         TransformStamped {
+            active: true,
             time_stamp: Instant::now(),
             parent_frame_id: "dummy_1".to_string(),
             child_frame_id: "dummy_3".to_string(),
@@ -575,6 +583,7 @@ mod tests {
         transform: Isometry3<f64>,
     ) -> TransformStamped {
         TransformStamped {
+            active: true,
             time_stamp: Instant::now(),
             parent_frame_id: parent_frame_id.to_string(),
             child_frame_id: child_frame_id.to_string(),

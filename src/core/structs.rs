@@ -1,5 +1,6 @@
 
 use nalgebra::{Isometry3, Quaternion, UnitQuaternion, Vector3};
+use r2r::geometry_msgs::msg::Transform;
 use serde::Deserialize;
 // use serde::Deserialize;
 // use structopt::StructOpt;
@@ -57,9 +58,22 @@ pub fn json_transform_to_isometry(json: JsonTransform) -> Isometry3<f64> {
     Isometry3::from_parts(translation.into(), rotation)
 }
 
+pub fn ros_transform_to_isometry(t: Transform) -> Isometry3<f64> {
+    let translation = Vector3::new(t.translation.x, t.translation.y, t.translation.z);
+    let rotation = UnitQuaternion::from_quaternion(Quaternion::new(
+        t.rotation.w,
+        t.rotation.x,
+        t.rotation.y,
+        t.rotation.z,
+    ));
+
+    Isometry3::from_parts(translation.into(), rotation)
+}
+
 // Isometry3 should be similar to the Transform message in ROS
 #[derive(Debug, Clone, PartialEq)]
 pub struct TransformStamped {
+    pub active: bool,
     // #[serde(deserialize_with = "deserialize_instant")]
     pub time_stamp: Instant,
     pub parent_frame_id: String,
@@ -72,6 +86,7 @@ pub struct TransformStamped {
 impl TransformStamped {
     pub fn default() -> TransformStamped {
         TransformStamped {
+            active: true,
             time_stamp: Instant::now(),
             parent_frame_id: "".to_string(),
             child_frame_id: "".to_string(),

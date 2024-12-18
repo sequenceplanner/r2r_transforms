@@ -90,9 +90,15 @@ pub fn load_new_scenario(scenario: &Vec<String>) -> HashMap<String, TransformSta
             None => "".to_string(),
         };
 
+        let active = match json["active"].as_bool() {
+            Some(false) => false,
+            _ => true 
+        };
+
         transforms_stamped.insert(
             child_frame_id.clone(),
             TransformStamped {
+                active,
                 time_stamp: Instant::now(),
                 child_frame_id,
                 parent_frame_id,

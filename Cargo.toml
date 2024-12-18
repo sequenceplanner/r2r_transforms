@@ -28,7 +28,7 @@ serde = { version = "1.0.209", features = ["derive"] }
 name = "space_tree"
 path = "examples/space_tree.rs"
 
-[[example]]
-name = "space_tree_ros"
-path = "examples/space_tree_ros.rs"
+# [[example]]
+# name = "space_tree_ros"
+# path = "examples/space_tree_ros.rs"
 # required-features = ["ros"]

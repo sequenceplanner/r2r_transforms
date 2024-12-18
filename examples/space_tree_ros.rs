@@ -22,7 +22,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let node = r2r::Node::create(context, "r2r_transforms", "")?;
     let arc_node = Arc::new(Mutex::new(node));
 
-    let buffer = SpaceTreeServer::new("test");
+    let arc_node_clone = arc_node.clone();
+    let buffer = RosSpaceTreeServer::new("test", &arc_node_clone);
 
     let buffer_clone = buffer.clone();
     tokio::task::spawn(async move {
@@ -32,14 +33,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
     });
 
-    let buffer_clone = buffer.clone();
-    let arc_node_clone = arc_node.clone();
-    tokio::task::spawn(async move {
-        match buffer_clone.connect_to_ros(&arc_node_clone).await {
-            Ok(()) => (),
-            Err(e) => error!("Connecting the buffer to ros failed with: '{}'.", e),
-        };
-    });
+    // let buffer_clone = buffer.clone();
+    // let arc_node_clone = arc_node.clone();
+    // tokio::task::spawn(async move {
+    //     match buffer_clone.connect_to_ros(&arc_node_clone).await {
+    //         Ok(()) => (),
+    //         Err(e) => error!("Connecting the buffer to ros failed with: '{}'.", e),
+    //     };
+    // });
 
     // Keep the node alive
     let arc_node_clone: Arc<Mutex<r2r::Node>> = arc_node.clone();
@@ -58,17 +59,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn space_tree_manipulation_example(
-    buffer: &SpaceTreeServer,
+    buffer: &RosSpaceTreeServer,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
 
     let path = format!("{}/examples/data", manifest_dir);
 
-    let _ = visualize_tree_once(&buffer);
 
-    // buffer.connect_to_ros(node);
-
-    // loop {
     tokio::time::sleep(Duration::from_millis(500)).await;
     buffer.load_scenario(&path, false);
     buffer.apply_changes();
@@ -76,10 +73,11 @@ pub async fn space_tree_manipulation_example(
     println!("Open RViz for visualizing the ROS connection.");
     tokio::time::sleep(Duration::from_millis(5000)).await;
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
 
     tokio::time::sleep(Duration::from_millis(500)).await;
     let new_transform = TransformStamped {
+        active: true,
         time_stamp: Instant::now(),
         parent_frame_id: "frame_5".to_string(),
         child_frame_id: "frame_6".to_string(),
@@ -90,84 +88,84 @@ pub async fn space_tree_manipulation_example(
     buffer.insert_transform("frame_6", new_transform.clone());
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.insert_transform("frame_7", new_transform);
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.move_transform("frame_6", json_transform_to_isometry(JsonTransform::default()));
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
 
     buffer.remove_transform("frame_7");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.rename_transform("frame_6", "frame_8");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.reparent_transform("frame_6", "child_7");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.clone_transform("frame_6", "child_7");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.clone_transform("frame_8", "frame_9");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.reparent_transform("frame_8", "child_7");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.reparent_transform("frame_3", "frame_8");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    buffer.reparent_transform("frame_8", "frame_3");
+    buffer.reparent_transform("frame_8", "world");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.remove_transform("frame_9");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     buffer.remove_transform("frame_5");
     buffer.apply_changes();
 
-    let _ = visualize_tree_once(&buffer);
+    // let _ = visualize_tree_once(&buffer);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     // buffer.delete_all_transforms();
     // buffer.apply_changes();
 
-    // let _ = visualize_tree_once(&buffer);
+    // // let _ = visualize_tree_once(&buffer);
     // tokio::time::sleep(Duration::from_millis(500)).await;
 
     Ok(())

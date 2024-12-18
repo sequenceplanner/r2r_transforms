@@ -73,7 +73,7 @@ pub async fn vizualize_tree(
 pub fn visualize_tree_once(
     buffer: &SpaceTreeServer,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let buffer_local = buffer.buffer.lock().unwrap().clone();
+    let buffer_local = buffer.local_buffer.lock().unwrap().clone();
 
     let mut parent_map: HashMap<String, Vec<String>> = HashMap::new();
     for transform in buffer_local.values() {
@@ -112,6 +112,7 @@ mod tests {
         transforms.insert(
             "child1".to_string(),
             TransformStamped {
+                active: true,
                 time_stamp: Instant::now(),
                 parent_frame_id: "root".to_string(),
                 child_frame_id: "child1".to_string(),
@@ -122,6 +123,7 @@ mod tests {
         transforms.insert(
             "child2".to_string(),
             TransformStamped {
+                active: true,
                 time_stamp: Instant::now(),
                 parent_frame_id: "child1".to_string(),
                 child_frame_id: "child2".to_string(),
@@ -132,6 +134,7 @@ mod tests {
         transforms.insert(
             "child3".to_string(),
             TransformStamped {
+                active: true,
                 time_stamp: Instant::now(),
                 parent_frame_id: "child1".to_string(),
                 child_frame_id: "child3".to_string(),
@@ -142,6 +145,7 @@ mod tests {
         transforms.insert(
             "child5".to_string(),
             TransformStamped {
+                active: true,
                 time_stamp: Instant::now(),
                 parent_frame_id: "child3".to_string(),
                 child_frame_id: "child5".to_string(),
@@ -153,6 +157,7 @@ mod tests {
         transforms.insert(
             "child4".to_string(),
             TransformStamped {
+                active: true,
                 time_stamp: Instant::now(),
                 parent_frame_id: "root".to_string(),
                 child_frame_id: "child4".to_string(),
@@ -193,6 +198,7 @@ mod tests {
             transforms.insert(
                 child_id.clone(),
                 TransformStamped {
+                    active: true,
                     time_stamp: Instant::now(),
                     parent_frame_id: parent_id,
                     child_frame_id: child_id.clone(),
