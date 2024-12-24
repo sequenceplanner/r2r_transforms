@@ -85,6 +85,9 @@ pub async fn space_tree_manipulation_example(
         json_metadata: "".to_string(),
     };
     
+
+    tokio::time::sleep(Duration::from_millis(5000)).await;
+
     buffer.insert_transform("frame_6", new_transform.clone());
     buffer.apply_changes();
 

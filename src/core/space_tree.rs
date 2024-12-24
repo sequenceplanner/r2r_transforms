@@ -178,6 +178,7 @@ impl SpaceTreeServer {
 
     pub fn reparent_transform(&self, name: &str, reparent_to: &str) {
         let local_buffer = self.local_buffer.lock().unwrap();
+        let global_buffer = self.global_buffer.lock().unwrap();
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !local_buffer.contains_key(name) {
@@ -188,7 +189,7 @@ impl SpaceTreeServer {
             return;
         }
 
-        if !local_buffer.contains_key(reparent_to) {
+        if !global_buffer.contains_key(reparent_to) {
             log::info!(
                 "Can't reparent the frame '{name}' to '{reparent_to}', reparent frame '{reparent_to}' doesn't exist.",
                 
@@ -349,7 +350,8 @@ impl SpaceTreeServer {
                         if check_would_produce_cycle(&temp, &buffer) {
                             log::info!("Transform '{}' would produce cycle if reparented, no action taken.", name);
                         } else {
-                            temp.parent_frame_id = update_context.transform.parent_frame_id.clone();
+                            let new_transform = Self::lookup_transform(&self, &temp.parent_frame_id, &temp.child_frame_id);
+                            temp.transform = new_transform.unwrap().transform;
                             buffer.insert(name.clone(), temp);
                             log::info!("Reparented transform '{name}' from '{}' to '{}'.", old_parent, update_context.transform.parent_frame_id);
                         }
