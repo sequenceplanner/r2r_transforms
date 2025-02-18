@@ -1,5 +1,6 @@
 use crate::{is_cyclic_all, TransformStamped};
 use nalgebra::Isometry3;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -11,7 +12,7 @@ pub fn isometry_chain_product(vec: Vec<Isometry3<f64>>) -> Isometry3<f64> {
     vec.iter().fold(Isometry3::identity(), |a, &b| a * b)
 }
 
-pub fn lookup_transform(
+pub fn lookup_transform_with_root(
     parent_frame_id: &str,
     child_frame_id: &str,
     root_frame_id: &str,
@@ -32,7 +33,7 @@ pub fn lookup_transform(
                         parent_frame_id: parent_frame_id.to_string(),
                         child_frame_id: child_frame_id.to_string(),
                         transform: iso_3,
-                        json_metadata: "".to_string(),
+                        metadata: Value::default()
                     })
                 }
                 None => None,
@@ -146,7 +147,8 @@ pub fn get_frame_children(
 mod tests {
 
     use nalgebra::{Isometry3, Quaternion, Translation, UnitQuaternion, Vector3};
-    use utils::lookup::{get_frame_children, lookup_transform, parent_to_root, root_to_child};
+    use serde_json::Value;
+    use utils::lookup::{get_frame_children, lookup_transform_with_root, parent_to_root, root_to_child};
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
     use tokio::time::Instant;
@@ -306,7 +308,7 @@ mod tests {
 
         let buffer = Arc::new(Mutex::new(buffer));
 
-        let result = lookup_transform("frame1", "frame3", "root", &buffer);
+        let result = lookup_transform_with_root("frame1", "frame3", "root", &buffer);
 
         assert!(result.is_some());
         let transform = result.unwrap();
@@ -341,7 +343,7 @@ mod tests {
 
         let buffer = Arc::new(Mutex::new(buffer));
 
-        let result = lookup_transform("root", "frameD", "root", &buffer);
+        let result = lookup_transform_with_root("root", "frameD", "root", &buffer);
 
         assert!(result.is_some());
         let transform = result.unwrap();
@@ -380,7 +382,7 @@ mod tests {
 
         let buffer = Arc::new(Mutex::new(buffer));
 
-        let result = lookup_transform("frame1", "frame4", "root", &buffer);
+        let result = lookup_transform_with_root("frame1", "frame4", "root", &buffer);
 
         assert!(result.is_some());
         let transform = result.unwrap();
@@ -412,7 +414,7 @@ mod tests {
                             1.0, 0.0, 0.0, 0.0,
                         )),
                     },
-                    json_metadata: "{foo: bar}".to_string(),
+                    metadata: Value::default()
                 },
             ),
             (
@@ -430,7 +432,7 @@ mod tests {
                             0.7071, 0.7071, 0.0, 0.0,
                         )),
                     },
-                    json_metadata: "{foo: bar}".to_string(),
+                    metadata: Value::default()
                 },
             ),
             (
@@ -448,7 +450,7 @@ mod tests {
                             0.7071, 0.0, 0.7071, 0.0,
                         )),
                     },
-                    json_metadata: "{foo: bar}".to_string(),
+                    metadata: Value::default()
                 },
             ),
             (
@@ -466,7 +468,7 @@ mod tests {
                             0.7071, 0.0, 0.0, 0.7071,
                         )),
                     },
-                    json_metadata: "{foo: bar}".to_string(),
+                    metadata: Value::default()
                 },
             ),
         ]);
@@ -484,7 +486,7 @@ mod tests {
             parent_frame_id: "world".to_string(),
             child_frame_id: "dummy_1".to_string(),
             transform: Isometry3::default(),
-            json_metadata: String::default(),
+            metadata: Value::default()
         }
     }
 
@@ -495,7 +497,7 @@ mod tests {
             parent_frame_id: "dummy_1".to_string(),
             child_frame_id: "dummy_2".to_string(),
             transform: Isometry3::default(),
-            json_metadata: String::default(),
+            metadata: Value::default()
         }
     }
 
@@ -506,7 +508,7 @@ mod tests {
             parent_frame_id: "dummy_1".to_string(),
             child_frame_id: "dummy_3".to_string(),
             transform: Isometry3::default(),
-            json_metadata: String::default(),
+            metadata: Value::default()
         }
     }
 
@@ -588,7 +590,7 @@ mod tests {
             parent_frame_id: parent_frame_id.to_string(),
             child_frame_id: child_frame_id.to_string(),
             transform,
-            json_metadata: "".to_string(),
+            metadata: Value::default()
         }
     }
 
@@ -607,7 +609,7 @@ mod tests {
 
         let buffer = Arc::new(Mutex::new(buffer));
 
-        let result = lookup_transform("parent", "child", "root", &buffer);
+        let result = lookup_transform_with_root("parent", "child", "root", &buffer);
 
         assert!(result.is_some());
         let transform = result.unwrap();

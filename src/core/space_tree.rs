@@ -30,8 +30,8 @@ pub struct SpaceTreeServer {
     pub name: String,
     // These are the transforms that we are in control of
     pub local_buffer: Arc<Mutex<HashMap<String, TransformStamped>>>,
-    // These are all the transforms that exist when connected to the ROS world via /tf and /tf_static
-    pub global_buffer: Arc<Mutex<HashMap<String, TransformStamped>>>,
+    // // These are all the transforms that exist when connected to the ROS world via /tf and /tf_static
+    // pub global_buffer: Arc<Mutex<HashMap<String, TransformStamped>>>,
     // We are only allowed to perform updates ont the local buffer
     pending_updates: Arc<Mutex<HashMap<String, UpdateContext>>>,
 }
@@ -41,7 +41,7 @@ impl SpaceTreeServer {
         Self {
             name: name.to_string(),
             local_buffer: Arc::new(Mutex::new(HashMap::new())),
-            global_buffer: Arc::new(Mutex::new(HashMap::new())),
+            // global_buffer: Arc::new(Mutex::new(HashMap::new())),
             pending_updates: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -178,7 +178,7 @@ impl SpaceTreeServer {
 
     pub fn reparent_transform(&self, name: &str, reparent_to: &str) {
         let local_buffer = self.local_buffer.lock().unwrap();
-        let global_buffer = self.global_buffer.lock().unwrap();
+        // let global_buffer = self.global_buffer.lock().unwrap();
         let mut pending_updates = self.pending_updates.lock().unwrap();
 
         if !local_buffer.contains_key(name) {
@@ -189,13 +189,13 @@ impl SpaceTreeServer {
             return;
         }
 
-        if !global_buffer.contains_key(reparent_to) {
-            log::info!(
-                "Can't reparent the frame '{name}' to '{reparent_to}', reparent frame '{reparent_to}' doesn't exist.",
+        // if !global_buffer.contains_key(reparent_to) {
+        //     log::info!(
+        //         "Can't reparent the frame '{name}' to '{reparent_to}', reparent frame '{reparent_to}' doesn't exist.",
                 
-            );
-            return;
-        }
+        //     );
+        //     return;
+        // }
 
         pending_updates.insert(
             name.to_string(),
@@ -260,17 +260,17 @@ impl SpaceTreeServer {
         let buffer = self.local_buffer.lock().unwrap();
         match get_tree_root(&buffer) {
             Some(root) => {
-                lookup_transform(parent_frame_id, child_frame_id, &root, &self.local_buffer)
+                lookup_transform_with_root(parent_frame_id, child_frame_id, &root, &self.local_buffer)
             },
             None => {
-                lookup_transform(parent_frame_id, child_frame_id, "world", &self.local_buffer)
+                lookup_transform_with_root(parent_frame_id, child_frame_id, "world", &self.local_buffer)
             }
         }
         
     }
 
     pub fn lookup_with_root(&self, parent_frame_id: &str, child_frame_id: &str, root_frame_id: &str) -> Option<TransformStamped> {
-        lookup_transform(parent_frame_id, child_frame_id, root_frame_id, &self.local_buffer)
+        lookup_transform_with_root(parent_frame_id, child_frame_id, root_frame_id, &self.local_buffer)
     }
 
     pub fn get_all_transform_names(&self) -> Vec<String> {

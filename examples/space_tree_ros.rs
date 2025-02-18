@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use log::*;
 use r2r::Context;
 use r2r_transforms::*;
+use serde_json::Value;
 use tokio::time::{Duration, Instant};
 
 pub static VISUALIZE_TREE_REFRESH_RATE: u64 = 100; // milliseconds
@@ -82,7 +83,7 @@ pub async fn space_tree_manipulation_example(
         parent_frame_id: "frame_5".to_string(),
         child_frame_id: "frame_6".to_string(),
         transform: json_transform_to_isometry(JsonTransform::default()),
-        json_metadata: "".to_string(),
+        metadata: Value::default()
     };
     
 

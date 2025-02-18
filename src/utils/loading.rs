@@ -85,12 +85,9 @@ pub fn load_new_scenario(scenario: &Vec<String>) -> HashMap<String, TransformSta
             None => continue,
         };
 
-        let json_metadata = match extract_string_field(&json, "json_metadata") {
-            Some(metadata) => metadata,
-            None => "".to_string(),
-        };
+        let metadata = json["metadata"].clone();
 
-        let active = match json["active"].as_bool() {
+        let active = match metadata["active"].as_bool() {
             Some(false) => false,
             _ => true 
         };
@@ -103,7 +100,7 @@ pub fn load_new_scenario(scenario: &Vec<String>) -> HashMap<String, TransformSta
                 child_frame_id,
                 parent_frame_id,
                 transform: json_transform_to_isometry(transform),
-                json_metadata,
+                metadata,
             },
         );
     }

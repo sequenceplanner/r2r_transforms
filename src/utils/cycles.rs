@@ -54,6 +54,7 @@ pub fn check_would_produce_cycle(
 mod tests {
 
     use nalgebra::Isometry3;
+    use serde_json::Value;
     use utils::cycles::{check_would_produce_cycle, is_cyclic, is_cyclic_all};
     use std::collections::HashMap;
     use tokio::time::Instant;
@@ -67,7 +68,7 @@ mod tests {
             parent_frame_id: "world".to_string(),
             child_frame_id: "dummy_1".to_string(),
             transform: Isometry3::default(),
-            json_metadata: String::default(),
+            metadata: Value::default()
         }
     }
 
@@ -78,7 +79,7 @@ mod tests {
             parent_frame_id: "dummy_1".to_string(),
             child_frame_id: "dummy_2".to_string(),
             transform: Isometry3::default(),
-            json_metadata: String::default(),
+            metadata: Value::default()
         }
     }
 
@@ -89,7 +90,7 @@ mod tests {
             parent_frame_id: "dummy_2".to_string(),
             child_frame_id: "dummy_3".to_string(),
             transform: Isometry3::default(),
-            json_metadata: String::default(),
+            metadata: Value::default()
         }
     }
 
@@ -134,7 +135,7 @@ mod tests {
                 parent_frame_id: "dummy_2".to_string(),
                 child_frame_id: "dummy_1".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -182,7 +183,7 @@ mod tests {
                 parent_frame_id: "dummy_3".to_string(),
                 child_frame_id: "dummy_1".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -227,7 +228,7 @@ mod tests {
                 parent_frame_id: "dummy_4".to_string(),
                 child_frame_id: "dummy_5".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -239,7 +240,7 @@ mod tests {
                 parent_frame_id: "dummy_5".to_string(),
                 child_frame_id: "dummy_6".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -260,7 +261,7 @@ mod tests {
                 parent_frame_id: "dummy_6".to_string(),
                 child_frame_id: "dummy_4".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -281,7 +282,7 @@ mod tests {
                 parent_frame_id: "world".to_string(),
                 child_frame_id: "dummy_4".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -324,7 +325,7 @@ mod tests {
                 parent_frame_id: "dummy_4".to_string(),
                 child_frame_id: "dummy_1".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             }, 
             &buffer), false
         );
@@ -336,7 +337,7 @@ mod tests {
                 parent_frame_id: "dummy_3".to_string(),
                 child_frame_id: "dummy_1".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             }, 
             &buffer), true
         );

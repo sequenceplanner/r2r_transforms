@@ -14,5 +14,7 @@
             "w": 1.0
         }
     },
-    "json_metadata": "{\"metadata_key\": \"metadata_value_35\"}"
+    "metadata": {
+        "key": "value_23"
+    }
 }

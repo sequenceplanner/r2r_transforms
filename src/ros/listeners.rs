@@ -1,6 +1,7 @@
 use crate::*;
 use futures::{Stream, StreamExt};
 use r2r::tf2_msgs::msg::TFMessage;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
@@ -25,7 +26,8 @@ pub async fn active_tf_listener_callback(
                             parent_frame_id: t.header.frame_id.clone(),
                             child_frame_id: t.child_frame_id.clone(),
                             transform: ros_transform_to_isometry(t.transform.clone()),
-                            json_metadata: "".to_string()
+                            metadata: Value::default()
+                            // json_metadata: "".to_string()
                         },
                     );
                 });
@@ -46,7 +48,7 @@ pub async fn static_tf_listener_callback(
         match subscriber.next().await {
             Some(message) => {
                 let mut frames_local = global_buffer.lock().unwrap().clone();
-                println!("{:?}", frames_local.keys());
+                // println!("{:?}", frames_local.keys());
                 message.transforms.iter().for_each(|t| {
                     frames_local.insert(
                         t.child_frame_id.clone(),
@@ -56,7 +58,8 @@ pub async fn static_tf_listener_callback(
                             parent_frame_id: t.header.frame_id.clone(),
                             child_frame_id: t.child_frame_id.clone(),
                             transform: ros_transform_to_isometry(t.transform.clone()),
-                            json_metadata: "".to_string()
+                            metadata: Value::default(),
+                            // json_metadata: "".to_string()
                         },
                     );
                 });

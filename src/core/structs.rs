@@ -2,6 +2,7 @@
 use nalgebra::{Isometry3, Quaternion, UnitQuaternion, Vector3};
 use r2r::geometry_msgs::msg::Transform;
 use serde::Deserialize;
+use serde_json::Value;
 // use serde::Deserialize;
 // use structopt::StructOpt;
 use tokio::time::Instant;
@@ -80,7 +81,8 @@ pub struct TransformStamped {
     pub child_frame_id: String,
     // #[serde(deserialize_with = "deserialize_isometry_3_f64")]
     pub transform: Isometry3<f64>,
-    pub json_metadata: String,
+    // pub json_metadata: String,
+    pub metadata: Value
 }
 
 impl TransformStamped {
@@ -91,7 +93,8 @@ impl TransformStamped {
             parent_frame_id: "".to_string(),
             child_frame_id: "".to_string(),
             transform: Isometry3::default(),
-            json_metadata: "".to_string()
+            metadata: Value::default()
+            // json_metadata: "".to_string()
         }
     }
 }

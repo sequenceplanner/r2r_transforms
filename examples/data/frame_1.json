@@ -14,5 +14,7 @@
             "w": 1.0
         }
     },
-    "json_metadata": "{\"active\": false}"
+    "metadata": {
+        "active": false
+    }
 }

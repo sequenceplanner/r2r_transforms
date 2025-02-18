@@ -356,17 +356,17 @@ impl RosSpaceTreeServer {
         let buffer = self.global_buffer.lock().unwrap();
         match get_tree_root(&buffer) {
             Some(root) => {
-                lookup_transform(parent_frame_id, child_frame_id, &root, &self.global_buffer)
+                lookup_transform_with_root(parent_frame_id, child_frame_id, &root, &self.global_buffer)
             },
             None => {
-                lookup_transform(parent_frame_id, child_frame_id, "world", &self.global_buffer)
+                lookup_transform_with_root(parent_frame_id, child_frame_id, "world", &self.global_buffer)
             }
         }
         
     }
 
     pub fn lookup_with_root(&self, parent_frame_id: &str, child_frame_id: &str, root_frame_id: &str) -> Option<TransformStamped> {
-        lookup_transform(parent_frame_id, child_frame_id, root_frame_id, &self.global_buffer)
+        lookup_transform_with_root(parent_frame_id, child_frame_id, root_frame_id, &self.global_buffer)
     }
 
     pub fn get_all_transform_names(&self) -> Vec<String> {

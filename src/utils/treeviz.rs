@@ -97,6 +97,7 @@ pub fn visualize_tree_once(
 mod tests {
 
     use nalgebra::Isometry3;
+    use serde_json::Value;
     use std::collections::HashMap;
     use tokio::time::Instant;
 
@@ -117,7 +118,7 @@ mod tests {
                 parent_frame_id: "root".to_string(),
                 child_frame_id: "child1".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
         transforms.insert(
@@ -128,7 +129,7 @@ mod tests {
                 parent_frame_id: "child1".to_string(),
                 child_frame_id: "child2".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
         transforms.insert(
@@ -139,7 +140,7 @@ mod tests {
                 parent_frame_id: "child1".to_string(),
                 child_frame_id: "child3".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
         transforms.insert(
@@ -150,7 +151,7 @@ mod tests {
                 parent_frame_id: "child3".to_string(),
                 child_frame_id: "child5".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -162,7 +163,7 @@ mod tests {
                 parent_frame_id: "root".to_string(),
                 child_frame_id: "child4".to_string(),
                 transform: Isometry3::default(),
-                json_metadata: String::default(),
+                metadata: Value::default()
             },
         );
 
@@ -203,7 +204,7 @@ mod tests {
                     parent_frame_id: parent_id,
                     child_frame_id: child_id.clone(),
                     transform: Isometry3::default(),
-                    json_metadata: "{}".to_string(),
+                    metadata: Value::default()
                 },
             );
         }
