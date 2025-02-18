@@ -1,6 +1,8 @@
 use serde_json::Value;
 use std::{
-    collections::HashMap, fs::{self, File}, io::BufReader
+    collections::HashMap,
+    fs::{self, File},
+    io::BufReader,
 };
 use tokio::time::Instant;
 
@@ -87,22 +89,35 @@ pub fn load_new_scenario(scenario: &Vec<String>) -> HashMap<String, TransformSta
 
         let metadata = json["metadata"].clone();
 
-        let active = match metadata["active"].as_bool() {
-            Some(false) => false,
-            _ => true 
+        let active = if let Some(Value::Bool(val)) = metadata.get("active_transform") {
+            println!("active_transform: {}", val);
+            *val
+        } else {
+            println!("active_transform not found or not a bool. Defaulting to true.");
+            true
         };
 
-        transforms_stamped.insert(
-            child_frame_id.clone(),
-            TransformStamped {
-                active,
-                time_stamp: Instant::now(),
-                child_frame_id,
-                parent_frame_id,
-                transform: json_transform_to_isometry(transform),
-                metadata,
-            },
-        );
+        let enable_transform = if let Some(Value::Bool(val)) = metadata.get("enable_transform") {
+            println!("enable_transform: {}", val);
+            *val
+        } else {
+            println!("enable_transform not found or not a bool. Defaulting to true.");
+            true
+        };
+
+        if enable_transform {
+            transforms_stamped.insert(
+                child_frame_id.clone(),
+                TransformStamped {
+                    active,
+                    time_stamp: Instant::now(),
+                    child_frame_id,
+                    parent_frame_id,
+                    transform: json_transform_to_isometry(transform),
+                    metadata,
+                },
+            );
+        }
     }
 
     transforms_stamped
@@ -115,7 +130,7 @@ fn load_json_from_file(path: &str) -> Option<Value> {
             match serde_json::from_reader(reader) {
                 Ok(json) => Some(json),
                 Err(e) => {
-                    log::warn!(target: "r2r_transforms", 
+                    log::warn!(target: "r2r_transforms",
                         concat!(
                             "Deserialization failed with: '{}'. ",
                             "The JSON file may be malformed or contain ",
@@ -126,9 +141,9 @@ fn load_json_from_file(path: &str) -> Option<Value> {
                     None
                 }
             }
-        },
+        }
         Err(e) => {
-            log::warn!(target: "r2r_transforms", 
+            log::warn!(target: "r2r_transforms",
                 concat!(
                     "Opening json file failed with: '{}'. ",
                     "Please check if the file path is correct and ",
@@ -145,7 +160,7 @@ fn extract_string_field(json: &Value, field: &str) -> Option<String> {
     match json.get(field).and_then(|v| v.as_str()) {
         Some(value) => Some(value.to_string()),
         None => {
-            log::warn!(target: "r2r_transforms", 
+            log::warn!(target: "r2r_transforms",
                 concat!(
                     "Invalid or missing '{}'. ",
                     "Ensure the '{}' field is present and ",
@@ -163,7 +178,7 @@ fn extract_transform(json: &Value) -> Option<JsonTransform> {
         Some(value) => match serde_json::from_value(value.clone()) {
             Ok(transform) => Some(transform),
             Err(e) => {
-                log::warn!(target: "r2r_transforms", 
+                log::warn!(target: "r2r_transforms",
                     concat!(
                         "Failed to deserialize 'transform' field: '{}'. ",
                         "Ensure the 'transform' field is correctly formatted."
@@ -174,7 +189,7 @@ fn extract_transform(json: &Value) -> Option<JsonTransform> {
             }
         },
         None => {
-            log::warn!(target: "", 
+            log::warn!(target: "",
                 concat!(
                     "Missing 'transform' field. ",
                     "Ensure the 'transform' field is present in the JSON."
