@@ -273,7 +273,7 @@ impl SpaceTreeServer {
         lookup_transform_with_root(parent_frame_id, child_frame_id, root_frame_id, &self.local_buffer)
     }
 
-    pub fn get_all_transform_names(&self) -> Vec<String> {
+    pub fn get_local_transform_names(&self) -> Vec<String> {
         let buffer = self.local_buffer.lock().unwrap();
         buffer.keys().map(|k| k.to_owned()).collect::<Vec<String>>()
     }

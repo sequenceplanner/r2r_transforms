@@ -80,8 +80,8 @@ pub async fn space_tree_manipulation_example(
     let new_transform = TransformStamped {
         active: true,
         time_stamp: Instant::now(),
-        parent_frame_id: "frame_5".to_string(),
-        child_frame_id: "frame_6".to_string(),
+        parent_frame_id: "frame_1".to_string(),
+        child_frame_id: "asdfasdf".to_string(),
         transform: json_transform_to_isometry(JsonTransform::default()),
         metadata: Value::default()
     };
@@ -89,7 +89,7 @@ pub async fn space_tree_manipulation_example(
 
     tokio::time::sleep(Duration::from_millis(5000)).await;
 
-    buffer.insert_transform("frame_6", new_transform.clone());
+    buffer.insert_transform("asdfasdf", new_transform.clone());
     buffer.apply_changes();
 
     // let _ = visualize_tree_once(&buffer);

@@ -90,7 +90,7 @@ pub fn load_new_scenario(scenario: &Vec<String>) -> HashMap<String, TransformSta
         let metadata = json["metadata"].clone();
 
         let active = if let Some(Value::Bool(val)) = metadata.get("active_transform") {
-            println!("active_transform: {}", val);
+            // println!("active_transform: {}", val);
             *val
         } else {
             println!("active_transform not found or not a bool. Defaulting to true.");
@@ -98,7 +98,7 @@ pub fn load_new_scenario(scenario: &Vec<String>) -> HashMap<String, TransformSta
         };
 
         let enable_transform = if let Some(Value::Bool(val)) = metadata.get("enable_transform") {
-            println!("enable_transform: {}", val);
+            // println!("enable_transform: {}", val);
             *val
         } else {
             println!("enable_transform not found or not a bool. Defaulting to true.");
