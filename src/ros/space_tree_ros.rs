@@ -119,7 +119,7 @@ impl RosSpaceTreeServer {
         });
 
         let static_tf_listener =
-            node.lock().unwrap().subscribe::<TFMessage>("tf_static", QosProfile::best_effort(QosProfile::default())).expect("Failed to initialize static_tf_listener.");
+            node.lock().unwrap().subscribe::<TFMessage>("tf_static", QosProfile::transient_local(QosProfile::default())).expect("Failed to initialize static_tf_listener.");
         let global_buffer_clone = global_buffer.clone();
         tokio::task::spawn(async move {
             match static_tf_listener_callback(
