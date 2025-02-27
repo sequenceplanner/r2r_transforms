@@ -86,7 +86,7 @@ impl RosSpaceTreeServer {
             .lock()
             .unwrap().create_publisher::<TFMessage>(
                 "tf",
-                QosProfile::transient_local(QosProfile::default()),
+                QosProfile::volatile(QosProfile::default()),
             ).expect("Failed to initialize active_frame_broadcaster.");
 
         let local_buffer_clone = local_buffer.clone();
